@@ -3,6 +3,7 @@ import requests
 
 app = Flask(__name__)
 
+# In-memory database
 inventory_db = [
     {"id": 1, "name": "Organic Almond Milk", "price": 4.99, "quantity": 50, "description": "Unsweetened organic almond milk", "brand": "Silk", "barcode": "123456789012"},
     {"id": 2, "name": "Whole Grain Bread", "price": 3.49, "quantity": 100, "description": "100% whole wheat bread", "brand": "Nature's Own", "barcode": "234567890123"},
@@ -38,9 +39,13 @@ def add_item():
     if not data or 'name' not in data or 'price' not in data or 'quantity' not in data:
         return jsonify({'status': 'error', 'message': 'Missing fields'}), 400
     new_item = {
-        'id': next_id, 'name': data['name'], 'price': float(data['price']),
-        'quantity': int(data['quantity']), 'description': data.get('description'),
-        'brand': data.get('brand'), 'barcode': data.get('barcode')
+        'id': next_id,
+        'name': data['name'],
+        'price': float(data['price']),
+        'quantity': int(data['quantity']),
+        'description': data.get('description'),
+        'brand': data.get('brand'),
+        'barcode': data.get('barcode')
     }
     inventory_db.append(new_item)
     next_id += 1
@@ -95,5 +100,21 @@ def external_product():
         return jsonify({'status': 'error', 'message': 'Not found'}), 404
 
 if __name__ == '__main__':
-    print("Inventory API running on http://localhost:5000")
+    print()
+    print("INVENTORY MANAGEMENT SYSTEM API")
+    print("-" * 40)
+    print(f"Items in inventory: {len(inventory_db)}")
+    print()
+    print("Available endpoints:")
+    print("  GET    /inventory                    - List all items")
+    print("  GET    /inventory/<id>               - Get single item")
+    print("  POST   /inventory                    - Add new item")
+    print("  PATCH  /inventory/<id>               - Update item")
+    print("  DELETE /inventory/<id>               - Delete item")
+    print("  GET    /external/product?barcode=123 - Fetch from OpenFoodFacts")
+    print("  GET    /external/product?name=milk   - Search OpenFoodFacts")
+    print()
+    print("Server running at: http://localhost:5000")
+    print("Press CTRL+C to quit")
+    print()
     app.run(debug=True, host='0.0.0.0', port=5000)
