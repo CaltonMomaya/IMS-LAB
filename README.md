@@ -30,7 +30,7 @@ pip install flask requests click
 #to run open1st terminal and run
 cd ~/IMS-LAB
 source venv/bin/activate
-python app.py
+python run.py
 
 #output should look like 
 
