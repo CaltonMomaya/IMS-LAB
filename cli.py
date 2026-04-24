@@ -9,14 +9,10 @@ import requests
 API_BASE_URL = "http://localhost:5000"
 
 class InventoryCLI:
-    """CLI interface for inventory management"""
-    
     @staticmethod
     def make_request(method, endpoint, data=None):
-        """Make HTTP request to API"""
         url = f"{API_BASE_URL}{endpoint}"
         headers = {'Content-Type': 'application/json'}
-        
         try:
             if method == 'GET':
                 response = requests.get(url)
@@ -28,20 +24,17 @@ class InventoryCLI:
                 response = requests.delete(url)
             else:
                 return None
-            
             response.raise_for_status()
             return response.json()
         except requests.exceptions.ConnectionError:
-            click.echo("\n❌ Error: Cannot connect to API server.")
-            click.echo("   Make sure the Flask server is running: python app.py\n")
+            click.echo("\nError: Cannot connect to API server. Make sure it's running: python run.py\n")
             return None
         except requests.exceptions.RequestException as e:
-            click.echo(f"❌ Error: {e}")
+            click.echo(f"Error: {e}")
             return None
-    
+
     @staticmethod
     def format_item(item):
-        """Format a single item for display - clean version"""
         click.echo(f"ID: {item['id']}")
         click.echo(f"Name: {item['name']}")
         click.echo(f"Price: ${item['price']:.2f}")
@@ -52,16 +45,14 @@ class InventoryCLI:
             click.echo(f"Description: {item['description'][:100]}")
         if item.get('barcode'):
             click.echo(f"Barcode: {item['barcode']}")
-        click.echo("")  # Empty line for spacing
+        click.echo("")
 
 @click.group()
 def cli():
-    """Inventory Management System CLI"""
     pass
 
 @cli.command()
 def list():
-    """List all inventory items"""
     result = InventoryCLI.make_request('GET', '/inventory')
     if result and result.get('status') == 'success':
         items = result.get('data', [])
@@ -71,13 +62,10 @@ def list():
                 InventoryCLI.format_item(item)
         else:
             click.echo("\nNo items in inventory\n")
-    else:
-        click.echo("\nFailed to fetch inventory items\n")
 
 @cli.command()
 @click.argument('item_id', type=int)
 def view(item_id):
-    """View a single inventory item"""
     result = InventoryCLI.make_request('GET', f'/inventory/{item_id}')
     if result and result.get('status') == 'success':
         click.echo("")
@@ -86,29 +74,20 @@ def view(item_id):
         click.echo(f"Error: {result.get('message', 'Item not found')}")
 
 @cli.command()
-@click.option('--name', prompt='Product name', help='Name of the product')
-@click.option('--price', prompt='Price', type=float, help='Product price')
-@click.option('--quantity', prompt='Quantity', type=int, help='Stock quantity')
+@click.option('--name', prompt='Product name')
+@click.option('--price', prompt='Price', type=float)
+@click.option('--quantity', prompt='Quantity', type=int)
 @click.option('--brand', help='Product brand')
 @click.option('--description', help='Product description')
 @click.option('--barcode', help='Product barcode')
 def add(name, price, quantity, brand, description, barcode):
-    """Add a new inventory item"""
-    data = {
-        'name': name,
-        'price': price,
-        'quantity': quantity
-    }
-    if brand:
-        data['brand'] = brand
-    if description:
-        data['description'] = description
-    if barcode:
-        data['barcode'] = barcode
-    
+    data = {'name': name, 'price': price, 'quantity': quantity}
+    if brand: data['brand'] = brand
+    if description: data['description'] = description
+    if barcode: data['barcode'] = barcode
     result = InventoryCLI.make_request('POST', '/inventory', data)
     if result and result.get('status') == 'success':
-        click.echo(f"\n✓ {result['message']}\n")
+        click.echo(f"\nSuccess: {result['message']}\n")
         InventoryCLI.format_item(result['data'])
 
 @cli.command()
@@ -119,56 +98,39 @@ def add(name, price, quantity, brand, description, barcode):
 @click.option('--brand', help='Product brand')
 @click.option('--description', help='Product description')
 def update(item_id, name, price, quantity, brand, description):
-    """Update an inventory item"""
     data = {}
-    if name:
-        data['name'] = name
-    if price is not None:
-        data['price'] = price
-    if quantity is not None:
-        data['quantity'] = quantity
-    if brand:
-        data['brand'] = brand
-    if description:
-        data['description'] = description
-    
+    if name: data['name'] = name
+    if price is not None: data['price'] = price
+    if quantity is not None: data['quantity'] = quantity
+    if brand: data['brand'] = brand
+    if description: data['description'] = description
     if not data:
         click.echo("No fields to update")
         return
-    
     result = InventoryCLI.make_request('PATCH', f'/inventory/{item_id}', data)
     if result and result.get('status') == 'success':
-        click.echo(f"\n✓ {result['message']}\n")
+        click.echo(f"\nSuccess: {result['message']}\n")
         InventoryCLI.format_item(result['data'])
 
 @cli.command()
 @click.argument('item_id', type=int)
 def delete(item_id):
-    """Delete an inventory item"""
     click.confirm(f"Are you sure you want to delete item {item_id}?", abort=True)
     result = InventoryCLI.make_request('DELETE', f'/inventory/{item_id}')
     if result and result.get('status') == 'success':
-        click.echo(f"\n✓ {result['message']}\n")
+        click.echo(f"\nSuccess: {result['message']}\n")
 
 @cli.command()
 @click.option('--barcode', help='Product barcode')
 @click.option('--name', help='Product name')
 def find(barcode, name):
-    """Find product from external API (OpenFoodFacts)"""
     if not barcode and not name:
         click.echo("Please provide either --barcode or --name")
-        click.echo("Example: python cli.py find --name milk")
-        click.echo("Example: python cli.py find --barcode 737628064502")
         return
-    
     params = []
-    if barcode:
-        params.append(f"barcode={barcode}")
-    if name:
-        params.append(f"name={name}")
-    
+    if barcode: params.append(f"barcode={barcode}")
+    if name: params.append(f"name={name}")
     result = InventoryCLI.make_request('GET', f'/external/product?{"&".join(params)}')
-    
     if result and result.get('status') == 'success':
         product = result['data']
         click.echo("\nProduct found:")
@@ -177,10 +139,7 @@ def find(barcode, name):
         click.echo(f"Category: {product.get('category', 'N/A')}")
         desc = product.get('description', 'N/A')
         click.echo(f"Description: {desc[:200]}")
-        if product.get('barcode'):
-            click.echo(f"Barcode: {product['barcode']}")
-        
-        # Offer to add to inventory
+        if product.get('barcode'): click.echo(f"Barcode: {product['barcode']}")
         if click.confirm("\nDo you want to add this product to inventory?"):
             price = click.prompt("Enter price", type=float)
             quantity = click.prompt("Enter quantity", type=int)
@@ -194,7 +153,7 @@ def find(barcode, name):
             }
             add_result = InventoryCLI.make_request('POST', '/inventory', add_data)
             if add_result and add_result.get('status') == 'success':
-                click.echo("\n✓ Product added to inventory successfully!")
+                click.echo("\nProduct added to inventory successfully!")
     elif result:
         click.echo(f"Error: {result.get('message', 'Product not found')}")
 
